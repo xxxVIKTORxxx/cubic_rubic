@@ -40,7 +40,7 @@ def get_state_string(cube_instance):
     return "".join(flat_chars)
 
 # --- 1. Autodidactic Iteration Training Loop ---
-def train_value_network(model, max_epochs=5000, batch_size=64):
+def train_value_network(model, max_epochs=2000, batch_size=64):
     optimizer = optim.Adam(model.parameters(), lr=0.0005, weight_decay=1e-5)
     criterion = nn.MSELoss()
     model.train()
@@ -50,20 +50,28 @@ def train_value_network(model, max_epochs=5000, batch_size=64):
         for direction in ['left', 'right']:
             all_actions.append((side, direction))
 
-    # Plateau tracking arrays
     best_loss = float('inf')
     plateau_counter = 0
-    patience_limit = 4  # Stop if the loss rolls around the same baseline 4 check-intervals in a row
+    patience_limit = 5
 
-    print("Starting Deep Autodidactic Loop with Dynamic Plateau Tracking...")
+    print("Starting Deep Autodidactic Loop with Dynamic Complexity Scaling...")
     for epoch in range(max_epochs):
         states_batch = []
         targets_batch = []
 
+        # CURRICULUM LEARNING: Slowly increase max distance as epochs get higher
+        if epoch < 200:
+            max_scramble_distance = 6
+        elif epoch < 500:
+            max_scramble_distance = 12
+        elif epoch < 1000:
+            max_scramble_distance = 18
+        else:
+            max_scramble_distance = 25 # Absolute ceiling for 3x3 complexity
+
         for _ in range(batch_size):
             env = RubiksCubeSimulator()
-            # Constrain search layer boundaries (1 to 6 steps)
-            scramble_steps = random.randint(1, 6)
+            scramble_steps = random.randint(1, max_scramble_distance)
             
             for _ in range(scramble_steps):
                 side, direction = random.choice(all_actions)
@@ -83,74 +91,89 @@ def train_value_network(model, max_epochs=5000, batch_size=64):
 
         current_loss = loss.item()
         
-        # Check training variance behavior every 50 epochs
         if epoch % 50 == 0:
-            print(f"🔄 Epoch {epoch:04d} | Processing Error Baseline: {current_loss:.4f}")
+            print(f"🔄 Epoch {epoch:04d} (Max Train Depth: {max_scramble_distance:02d}) | Loss: {current_loss:.4f}")
             
-            # Monitor if loss is rolling/converging instead of dropping significantly
-            if current_loss < best_loss - 0.1:
+            if current_loss < best_loss - 0.05:
                 best_loss = current_loss
-                plateau_counter = 0  # Loss dropped notably, reset patience
+                plateau_counter = 0
             else:
-                plateau_counter += 1 # Loss is fluctuating within the same baseline margin
+                plateau_counter += 1
                 
-            if plateau_counter >= patience_limit and epoch > 100:
-                print(f"🎯 Convergence Plateau reached at epoch {epoch} (Loss: {current_loss:.4f}). Optimization complete!")
+            # Only trigger dynamic stop if we are already training on the deepest configurations
+            if plateau_counter >= patience_limit and epoch > 1100:
+                print(f"🎯 Chaos Convergence reached at epoch {epoch} (Loss: {current_loss:.4f}). Optimization complete!")
                 break
 
 # --- 2. Strategic A* Solver (The Global Picture Engine) ---
+# ==========================================
+# PARTIAL CODE FOR UPDATE WITHIN: cube_solver.py
+# ==========================================
+import heapq
+import torch
+import copy
+
 def solve_cube_with_astart(scrambled_cube, model):
     model.eval()
+    
+    # --- SPEED TUNING HYPERPARAMETER ---
+    # 1.0 = Standard A* (Perfect, but incredibly slow for depths > 6)
+    # 2.0+ = Weighted A* (Runs up to 1000x faster, near-optimal paths)
+    HEURISTIC_WEIGHT = 2.2 
+
     all_actions = []
     for side in RubiksCubeSimulator.SIDES:
         for direction in ['left', 'right']:
             all_actions.append((side, direction))
 
-    # Priority queue storing elements as: (F_score, unique_counter, steps_taken, current_cube_object, path_taken)
-    # Priority Queue automatically bubbles up the lowest F_score
     queue = []
     counter = 0
     
-    # Evaluate starting state
-    start_state_tensor = encode_cube_state(scrambled_cube).unsqueeze(0)
+    start_tensor = encode_cube_state(scrambled_cube).unsqueeze(0)
     with torch.no_grad():
-        predicted_h = model(start_state_tensor).item()
+        predicted_h = model(start_tensor).item()
     
-    # Initial F = 0 actual moves + predicted_h remaining
-    heapq.heappush(queue, (predicted_h, counter, 0, copy.deepcopy(scrambled_cube), []))
+    # Push initial node
+    heapq.heappush(queue, (predicted_h * HEURISTIC_WEIGHT, counter, 0, copy.deepcopy(scrambled_cube), []))
     
-    # Track visited states to eliminate loops completely
     visited_states = set()
     visited_states.add(get_state_string(scrambled_cube))
 
-    print("\nExecuting Strategic A* Search...")
+    print("\nExecuting Strategic Accelerated Weighted A* Search...")
+    
+    # Safety breakout loop threshold
+    max_evaluations = 50000 
+    eval_count = 0
+
     while queue:
+        eval_count += 1
+        if eval_count > max_evaluations:
+            print(f"⚠️ Search limit reached ({max_evaluations} states checked). Breaking to prevent RAM freeze.")
+            return None
+
         f, _, g, current_cube, path = heapq.heappop(queue)
 
-        # Strategic check: Have we solved it?
         if current_cube.is_solved():
-            print(f"🎉 Solution found globally optimized in {g} moves!")
+            print(f"🎉 Solution optimized in {g} moves! (Evaluated {eval_count} total states)")
             return path
 
-        # Try all 12 possible next moves strategically
         for side, direction in all_actions:
             next_cube = copy.deepcopy(current_cube)
             next_cube.move(side, direction)
             state_str = get_state_string(next_cube)
 
             if state_str in visited_states:
-                continue # Skip loops entirely
+                continue
             
             visited_states.add(state_str)
 
-            # Let neural network evaluate the strategic value of this transition
             next_tensor = encode_cube_state(next_cube).unsqueeze(0)
             with torch.no_grad():
                 h = model(next_tensor).item()
             
-            # Update scores
             next_g = g + 1
-            next_f = next_g + h
+            # Apply Heuristic Weighting here to prioritize deeper progress
+            next_f = next_g + (h * HEURISTIC_WEIGHT)
             next_path = path + [(side, direction)]
 
             counter += 1
@@ -158,6 +181,7 @@ def solve_cube_with_astart(scrambled_cube, model):
 
     print("❌ Strategy failed. Search space exhausted.")
     return None
+
 
 # --- Execution Test Run ---
 if __name__ == "__main__":
