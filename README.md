@@ -7,9 +7,9 @@ cubic rubic with NN (I had nothing to do this night, and had AI)<br>
 
 <img width="653" height="686" alt="image" src="https://github.com/user-attachments/assets/e762d43d-2a4d-49b8-9060-17fbd37debe5" />
 <br>
-====================<br>
-The harder Scrambler version:<br>
-====================<br>
+<b>====================<br>
+<i>The harder Scrambler version:</i><br>
+====================</b><br>
 <br>
 <img width="808" height="779" alt="image" src="https://github.com/user-attachments/assets/6a906dc7-a1b7-4507-a769-ff18a1b0d5e7" />
 
