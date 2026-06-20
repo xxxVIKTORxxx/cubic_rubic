@@ -36,7 +36,7 @@ def run_engine():
         brain.load_state_dict(torch.load(MODEL_FILE, weights_only=True))
     else:
         print("\n[3/4] 🧠 No network model cached. Training deep neural network layers...")
-        train_value_network(brain, max_epochs=1200, batch_size=32)
+        train_value_network(brain, max_epochs=2200, batch_size=64)
         print(f"💾 Caching trained network architecture state to '{MODEL_FILE}'...")
         torch.save(brain.state_dict(), MODEL_FILE)
 

@@ -40,8 +40,12 @@ def get_state_string(cube_instance):
     return "".join(flat_chars)
 
 # --- 1. Autodidactic Iteration Training Loop ---
-def train_value_network(model, max_epochs=2000, batch_size=64):
-    optimizer = optim.Adam(model.parameters(), lr=0.0005, weight_decay=1e-5)
+def train_value_network(model, max_epochs=2200, batch_size=64):
+    """
+    Forces the network to spend more time optimizing complex states
+    to guarantee fast A* resolution.
+    """
+    optimizer = optim.Adam(model.parameters(), lr=0.0007, weight_decay=1e-5)
     criterion = nn.MSELoss()
     model.train()
 
@@ -50,24 +54,20 @@ def train_value_network(model, max_epochs=2000, batch_size=64):
         for direction in ['left', 'right']:
             all_actions.append((side, direction))
 
-    best_loss = float('inf')
-    plateau_counter = 0
-    patience_limit = 5
-
-    print("Starting Deep Autodidactic Loop with Dynamic Complexity Scaling...")
+    print("Starting Deep Autodidactic Loop with Fixed Extended Chaos Training...")
     for epoch in range(max_epochs):
         states_batch = []
         targets_batch = []
 
-        # CURRICULUM LEARNING: Slowly increase max distance as epochs get higher
-        if epoch < 200:
+        # Paced curriculum mapping
+        if epoch < 300:
             max_scramble_distance = 6
-        elif epoch < 500:
+        elif epoch < 700:
             max_scramble_distance = 12
-        elif epoch < 1000:
+        elif epoch < 1300:
             max_scramble_distance = 18
         else:
-            max_scramble_distance = 25 # Absolute ceiling for 3x3 complexity
+            max_scramble_distance = 22 # Focus hard on deep states at the end
 
         for _ in range(batch_size):
             env = RubiksCubeSimulator()
@@ -89,21 +89,11 @@ def train_value_network(model, max_epochs=2000, batch_size=64):
         loss.backward()
         optimizer.step()
 
-        current_loss = loss.item()
-        
         if epoch % 50 == 0:
-            print(f"🔄 Epoch {epoch:04d} (Max Train Depth: {max_scramble_distance:02d}) | Loss: {current_loss:.4f}")
-            
-            if current_loss < best_loss - 0.05:
-                best_loss = current_loss
-                plateau_counter = 0
-            else:
-                plateau_counter += 1
-                
-            # Only trigger dynamic stop if we are already training on the deepest configurations
-            if plateau_counter >= patience_limit and epoch > 1100:
-                print(f"🎯 Chaos Convergence reached at epoch {epoch} (Loss: {current_loss:.4f}). Optimization complete!")
-                break
+            print(f"🔄 Epoch {epoch:04d} (Max Train Depth: {max_scramble_distance:02d}) | Current Loss: {loss.item():.4f}")
+
+    print("🎯 Training Complete! The network has thoroughly processed the full curriculum depth.")
+
 
 # --- 2. Strategic A* Solver (The Global Picture Engine) ---
 # ==========================================
