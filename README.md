@@ -9,6 +9,8 @@ cubic rubic with NN (I had nothing to do this night, and had AI)<br>
 <br>
 ====================<br>
 The harder Scrambler version:<br>
+====================<br>
+<br>
 <img width="808" height="779" alt="image" src="https://github.com/user-attachments/assets/6a906dc7-a1b7-4507-a769-ff18a1b0d5e7" />
 
 <img width="757" height="527" alt="image" src="https://github.com/user-attachments/assets/ba3c76cc-0a7d-492d-9b3d-b3d5e0c436f2" />
@@ -17,5 +19,5 @@ The harder Scrambler version:<br>
 
 <img width="672" height="670" alt="image" src="https://github.com/user-attachments/assets/b90c10f7-3d5a-4462-aa08-aae0c070cadb" />
 
-
+<br><br><br>
 Now you've seen all.
