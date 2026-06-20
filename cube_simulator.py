@@ -1,3 +1,6 @@
+# ==========================================
+# FILE: cube_simulator.py (Airtight 3D Physics)
+# ==========================================
 import random
 import copy
 
@@ -6,37 +9,40 @@ class RubiksCubeSimulator:
     SIDES = ['Up', 'Down', 'Forward', 'Backward', 'Left', 'Right']
 
     def __init__(self):
-        """Initializes the cube strictly in a SOLVED state."""
+        """Initializes the cube strictly in a uniform, solved layout."""
         self.sides = {}
         self.reset_to_solved()
 
     def reset_to_solved(self):
-        """Sets every side to a uniform 3x3 layout of a single unique color."""
+        """Sets every side to a clean 3x3 layout of a single unique color."""
         for side, color in zip(self.SIDES, self.COLORS):
             self.sides[side] = [[color] * 3 for _ in range(3)]
 
     def scramble(self, steps=20):
-        """Independent scrambler. Moves away from the current state."""
+        """Independent sequential physical layout shuffler."""
+        all_actions = []
+        for side in self.SIDES:
+            for direction in ['left', 'right']:
+                all_actions.append((side, direction))
+        
         history = []
         for _ in range(steps):
-            side = random.choice(self.SIDES)
-            direction = random.choice(['left', 'right'])
+            side, direction = random.choice(all_actions)
             self.move(side, direction)
             history.append((side, direction))
         return history
 
     def is_solved(self) -> bool:
-        """User Win Checker: Returns True if all 6 sides are uniform."""
+        """User Win Checker: Confirms all 6 faces are completely uniform."""
         for side in self.SIDES:
             matrix = self.sides[side]
             first_sticker = matrix[0][0]
-            # Ensure every single sticker on this face matches the first one
             if not all(sticker == first_sticker for row in matrix for sticker in row):
                 return False
         return True
 
     def display(self):
-        """Prints the compact side-by-side or stacked grid view."""
+        """Prints a scannable grid configuration of the current side states."""
         for side in self.SIDES:
             print(f"[{side}]")
             for row in self.sides[side]:
@@ -44,19 +50,21 @@ class RubiksCubeSimulator:
         print("-" * 15)
 
     def _rotate_face_surface(self, side, direction):
+        """Rotates the 3x3 array of the target side matrix itself."""
         matrix = self.sides[side]
         if direction == 'right':
-            # Clockwise rotation
             self.sides[side] = [list(x) for x in zip(*matrix[::-1])]
         else:
-            # Counter-Clockwise rotation: Wrap the zip in a list() before slicing
             self.sides[side] = [list(x) for x in list(zip(*matrix))[::-1]]
 
     def move(self, side, direction):
         """
-        Geometrically precise 3D move mechanics for a Rubik's Cube.
+        Executes mathematically locked 3D translations across adjacent borders.
         """
+        # 1. First, spin the isolated face's own 3x3 matrix surface
         self._rotate_face_surface(side, direction)
+        
+        # 2. Duplicate current spatial vectors to isolate transfer states
         s = copy.deepcopy(self.sides)
 
         if side == 'Up':
@@ -117,24 +125,24 @@ class RubiksCubeSimulator:
                     self.sides['Up'][2][i]       = s['Left'][2-i][2]
                     self.sides['Right'][i][0]    = s['Up'][2][i]
                     self.sides['Down'][0][2-i]   = s['Right'][i][0]
-                    self.sides['Left'][2-i][2]   = s['Down'][0][2-i]
+                    self.sides['Left'][i][2]     = s['Down'][0][i]
             else:
                 for i in range(3):
                     self.sides['Up'][2][i]       = s['Right'][i][0]
                     self.sides['Left'][2-i][2]   = s['Up'][2][i]
-                    self.sides['Down'][0][2-i]   = s['Left'][2-i][2]
-                    self.sides['Right'][i][0]    = s['Down'][0][2-i]
+                    self.sides['Down'][0][i]     = s['Left'][i][2]
+                    self.sides['Right'][2-i][0]  = s['Down'][0][i]
 
         elif side == 'Backward':
             if direction == 'right':
                 for i in range(3):
                     self.sides['Up'][0][i]       = s['Right'][i][2]
                     self.sides['Left'][2-i][0]   = s['Up'][0][i]
-                    self.sides['Down'][2][2-i]   = s['Left'][2-i][0]
-                    self.sides['Right'][i][2]    = s['Down'][2][2-i]
+                    self.sides['Down'][2][i]     = s['Left'][i][0]
+                    self.sides['Right'][2-i][2]  = s['Down'][2][i]
             else:
                 for i in range(3):
                     self.sides['Up'][0][i]       = s['Left'][2-i][0]
                     self.sides['Right'][i][2]    = s['Up'][0][i]
                     self.sides['Down'][2][2-i]   = s['Right'][i][2]
-                    self.sides['Left'][2-i][0]   = s['Down'][2][2-i]
+                    self.sides['Left'][i][0]     = s['Down'][2][i]
