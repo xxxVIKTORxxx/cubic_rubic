@@ -20,4 +20,5 @@ The harder Scrambler version:<br>
 <img width="672" height="670" alt="image" src="https://github.com/user-attachments/assets/b90c10f7-3d5a-4462-aa08-aae0c070cadb" />
 
 <br><br><br>
-Now you've seen all.
+<b><i>Now you've seen all.</i></b>
+<br><br><br>
